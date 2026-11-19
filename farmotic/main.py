@@ -48,7 +48,7 @@ from maj import (
     verifier_mise_a_jour,
 )
 from fastapi import Body, Depends, FastAPI, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, PlainTextResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, PlainTextResponse, Response
 from starlette.background import BackgroundTask
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -724,6 +724,59 @@ async def middleware_session(request: Request, call_next):
         response.headers.append("set-cookie", _entete_cookie(identifiant))
 
     return response
+
+
+@app.middleware("http")
+async def middleware_ingress(request: Request, call_next):
+    """Soutient l'ingress Home Assistant.
+
+    HA envoie le header ``X-Ingress-Path`` (ex. ``/api/hassio_ingress/TOKEN``) et
+    transfère les requêtes avec ce préfixe dans le chemin. On mémorise ce préfixe
+    (pour réécrire les URLs du frontend) et on l'enlève du chemin avant le routage.
+    """
+    ingress = request.headers.get("X-Ingress-Path", "").rstrip("/")
+    request.state.ingress_path = ingress
+
+    if ingress:
+        chemin = request.url.path
+        if chemin == ingress or chemin.startswith(ingress + "/"):
+            request.scope["path"] = chemin[len(ingress):] or "/"
+
+    return await call_next(request)
+
+
+# Cache des fichiers réécrits pour l'ingress (le jeton change rarement).
+_cache_ingress = threading.Lock()
+_rewrites_ingress = {}
+
+
+def _corps_reecrit_ingress(fichier: Path, ingress: str) -> bytes:
+    """Renvoie les octets du fichier avec les chemins absolus préfixés par ingress."""
+    cle = (str(fichier), ingress)
+    with _cache_ingress:
+        if cle in _rewrites_ingress:
+            return _rewrites_ingress[cle]
+
+    texte = fichier.read_text(encoding="utf-8")
+    if fichier.suffix == ".js":
+        # L'API du frontend est référencée par Rx="/api" → Rx="/{ingress}/api"
+        texte = texte.replace('Rx="/api"', f'Rx="{ingress}/api"')
+    else:
+        # HTML : préfixe les ressources absolues (/assets, /favicon, /manifest…)
+        for motif in (f'"/assets/', f'"/favicon.', f'"/manifest.', f'"/apple-touch-icon.png'):
+            texte = texte.replace(motif, f'"{ingress}{motif[1:]}')
+        # <base> pour toute URL relative du SPA
+        if "<head>" in texte:
+            texte = texte.replace(
+                "<head>",
+                f'<head><base href="{ingress}/">',
+                1,
+            )
+
+    octets = texte.encode("utf-8")
+    with _cache_ingress:
+        _rewrites_ingress[cle] = octets
+    return octets
 
 
 @app.exception_handler(StarletteHTTPException)
@@ -2890,7 +2943,7 @@ def api_inconnue(chemin: str = ""):
 
 
 @app.api_route("/{chemin:path}", methods=["GET", "HEAD"])
-def servir_interface(chemin: str):
+def servir_interface(chemin: str, request: Request):
     if DOSSIER_INTERFACE is None:
         if chemin in ("", "/"):
             return PlainTextResponse(
@@ -2899,16 +2952,34 @@ def servir_interface(chemin: str):
             )
         return erreur("Ressource introuvable.", 404)
 
+    ingress = getattr(request.state, "ingress_path", "")
+
     racine_interface = DOSSIER_INTERFACE.resolve()
+    cible = racine_interface / "index.html"
     if chemin:
         fichier = (racine_interface / chemin).resolve()
         if fichier.is_file() and racine_interface in fichier.parents:
-            return FileResponse(
-                fichier, headers={"cache-control": "public, max-age=3600"}
+            cible = fichier
+        else:
+            cible = racine_interface / "index.html"
+
+    if ingress and cible.suffix in (".html", ".js"):
+        corps = _corps_reecrit_ingress(cible, ingress)
+        if cible.suffix == ".js":
+            return Response(
+                corps,
+                media_type="application/javascript",
+                headers={"cache-control": "public, max-age=3600"},
             )
+        return HTMLResponse(
+            corps, headers={"cache-control": "no-cache"}
+        )
 
     return FileResponse(
-        racine_interface / "index.html", headers={"cache-control": "no-cache"}
+        cible,
+        headers={"cache-control": "public, max-age=3600"}
+        if cible.suffix != ".html"
+        else {"cache-control": "no-cache"},
     )
 
 

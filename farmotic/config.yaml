@@ -16,8 +16,9 @@ ports:
 panel_icon: mdi:chicken
 panel_title: Farmotic
 panel_admin: true
-webui: "http://[HOST]:[PORT:3001]"
-watchdog: "http://[HOST]:[PORT:3001]/api/sante"
+ingress: true
+ingress_port: 3001
+ingress_entry: "/"
 options:
   port: 3001
   host: "0.0.0.0"
