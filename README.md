@@ -18,8 +18,7 @@ L'addon expose l'interface React (Vite + Tailwind) et le serveur FastAPI de Farm
 ## Structure du dépôt (pour Home Assistant)
 
 ```
-Farmotic/
-└── hass-addon/                     # ← Dépôt à ajouter dans HA
+    hass-addon/                     # ← Dépôt à ajouter dans HA
     ├── repository.yaml             # ← Déclaration du dépôt HA
     ├── README.md                  # ← Ce document
     └── farmotic/                   # ← L'addon (slug)
