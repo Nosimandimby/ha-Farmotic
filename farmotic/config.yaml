@@ -3,8 +3,9 @@ version: "2.1.0"
 slug: farmotic
 description: "Application de suivi d'élevage de poulets de chair : cycles (bandes), relevés journaliers, mortalité, charges, références de croissance et indicateurs techno-économiques (indice de consommation, coût par kilo, marge)."
 url: "https://github.com/Nosimandimby/Farmotic"
-codenotify: "true"
+codenotify: true
 init: false
+legacy: true
 arch:
   - amd64
   - armhf

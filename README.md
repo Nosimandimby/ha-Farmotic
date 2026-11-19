@@ -21,11 +21,11 @@ L'addon expose l'interface React (Vite + Tailwind) et le serveur FastAPI de Farm
 Farmotic/
 └── hass-addon/                     # ← Dépôt à ajouter dans HA
     ├── repository.yaml             # ← Déclaration du dépôt HA
+    ├── README.md                  # ← Ce document
     └── farmotic/                   # ← L'addon (slug)
-        ├── config.yaml             # ← Métadonnées de l'addon
+        ├── config.yaml             # ← Métadonnées + options de l'addon
         ├── Dockerfile              # ← Image de conteneur Python 3.11
         ├── run.sh                  # ← Script de démarrage
-        ├── README.md               # ← Ce document
         ├── main.py                 # ← Backend FastAPI
         ├── lancer.py               # ← Lanceur original
         ├── maj.py                  # ← Moteur de mise à jour
@@ -42,13 +42,13 @@ Farmotic/
 2. Cliquez sur **"..." (trois points) → Déposer un dépôt d'add-on**.
 3. Saisissez l'URL du dépôt :
    ```
-   https://github.com/Nosimandimby/Farmotic
+   https://github.com/Nosimandimby/ha-Farmotic
    ```
-   (ou `https://github.com/Nosimandimby/Farmotic/tree/main/hass-addon` si les fichiers sont dans un sous-dossier).
+   (cette URL est déclarée dans `repository.yaml` du dépôt ; vous pouvez aussi utiliser `https://github.com/Nosimandimby/Farmotic/ha-Farmotic` si le dépôt est organisé différemment).
 4. Cliquez sur **Ajouter**.
 5. Recherchez **Farmotic** dans la liste des add-ons disponibles.
 6. Cliquez sur **Installer**, puis **Démarrer**.
-7. Ouvrez l'addon (icône 🐔) ou allez sur `http://IP_HA:3001`.
+7. Ouvrez l'addon (icône 🐔) ou allez sur `http://IP_HA:<port>` (3001 par défaut).
 
 ### Méthode 2 — Copie locale (développement)
 
@@ -63,8 +63,9 @@ Puis rechargez les add-ons dans HA : **Paramètres → Compléments → Recharge
 ## 🚀 Test rapide (Docker autonome)
 
 ```bash
+# Depuis la racine du dépôt (où se trouve repository.yaml et folder hass-addon/)
+cd hass-addon
 # Build
-cd /home/nosimandimby/Documents/Freebuff/Farmotic/hass-addon
 docker build -t farmotic:latest farmotic/
 
 # Run avec volume persistant
@@ -80,12 +81,16 @@ curl http://localhost:3001/api/sante
 
 ## ⚙️ Configuration
 
-| Option | Défaut | Description |
-|--------|--------|-------------|
-| `port` | 3001 | Port d'écoute |
-| `host` | 0.0.0.0 | Interface réseau (0.0.0.0 = accessible LAN) |
-| `auto_update` | false | Mises à jour auto depuis Git |
-| `no_open` | true | Ne pas ouvrir le navigateur au démarrage |
+L'addon accepte les options suivantes (configurables via l'interface de Home Assistant) :
+
+| Option    | Défaut | Description                                   |
+|-----------|--------|-----------------------------------------------|
+| `port`    | 3001   | Numéro de port TCP sur lequel le serveur FastAPI écoute (1–65535). |
+| `host`    | 0.0.0.0 | Interface réseau : `0.0.0.0` = accessible LAN, `127.0.0.1` = local uniquement. |
+| `auto_update` | false | Active la mise à jour automatique depuis le dépôt Git distant (nécessite un accès réseau). |
+| `no_open` | true   | Si `true`, le navigateur n'est pas ouvert automatiquement au démarrage. |
+
+> **Important :** l'option `port` modifie uniquement le port d'écoute **dans le conteneur**. La correspondance de port réseau (`ports:` dans `config.yaml`) reste fixe (`3001/tcp: 3001`). Pour tester manuellement, utilisez `--port <votre_port>` en lançant l'addon (ou modifiez l'option `port` dans HA et redémarrez l'addon).
 
 ## 🔑 Identifiants par défaut
 
@@ -96,5 +101,6 @@ curl http://localhost:3001/api/sante
 
 ## 💾 Données persistantes
 
-- La base SQLite est stockée dans `/data/database.sqlite` (persistante via le volume Home Assistant).
-- Le secret de session est dans `/data/session-secret.txt`.
+- La base SQLite (`database.sqlite`) est stockée dans `/data/database.sqlite` (montée par le volume Home Assistant `data`).
+- Le secret de session (`session-secret.txt`) est dans `/data/session-secret.txt`.
+- Tous les fichiers de l'application sont sauvegardés en cas de redémarrage de l'addon.
