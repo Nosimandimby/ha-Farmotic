@@ -3,7 +3,6 @@ version: "2.1.0"
 slug: farmotic
 description: "Application de suivi d'élevage de poulets de chair : cycles (bandes), relevés journaliers, mortalité, charges, références de croissance et indicateurs techno-économiques (indice de consommation, coût par kilo, marge)."
 url: "https://github.com/Nosimandimby/Farmotic"
-codenotify: true
 init: false
 legacy: true
 arch:
@@ -15,23 +14,21 @@ arch:
 ports:
   3001/tcp: 3001
 panel_icon: mdi:chicken
+panel_title: Farmotic
 panel_admin: true
+webui: "http://[HOST]:[PORT:3001]"
+watchdog: "http://[HOST]:[PORT:3001]/api/sante"
 options:
   port: 3001
   host: "0.0.0.0"
   auto_update: false
   no_open: true
-  watchdog: "http://localhost:3001/api/sante"
 schema:
   port: int
   host: str
   auto_update: bool
   no_open: bool
-  watchdog: "url?"
 services: []
 startup: once
 boot: auto
 build: true
-ingress: true
-ingress_port: 8080
-ingress_entry: /

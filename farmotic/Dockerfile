@@ -42,8 +42,8 @@ ENV HOST=0.0.0.0
 ENV PORT=3001
 ENV FARMOTIC_NO_OPEN=1
 
-# Exposer le port (utilisé par HA pour l'accès direct + ingress_port pour l'ingress)
-EXPOSE 3001 8080
+# Exposer le port (utilisé par HA pour l'accès direct via l'onglet "Open Web UI")
+EXPOSE 3001
 
 # Lancer l'application (root pour écrire dans le volume /data monté par HA)
 CMD ["./run.sh"]
