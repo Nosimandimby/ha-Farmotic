@@ -726,6 +726,23 @@ async def middleware_session(request: Request, call_next):
     return response
 
 
+@app.middleware("http")
+async def middleware_ingress(request: Request, call_next):
+    """Adapte les chemins pour l'ingress Home Assistant (X-Ingress-Path)."""
+    ingress_path = request.headers.get("X-Ingress-Path", "")
+    if ingress_path:
+        prefixe = ingress_path.rstrip("/")
+        chemin = request.url.path
+        if chemin.startswith(prefixe):
+            chemin = chemin[len(prefixe):] or "/"
+            # Reconstruction du chemin sans le préfixe ingress pour Starlette
+            nouvelles_query = request.url.query
+            nouvelles_query = nouvelles_query if nouvelles_query else ""
+            url_sans_prefixe = f"{chemin}?{nouvelles_query}" if nouvelles_query else chemin
+            request.scope["path"] = url_sans_prefixe
+    return await call_next(request)
+
+
 @app.exception_handler(StarletteHTTPException)
 async def gestion_erreur_http(request: Request, exc: StarletteHTTPException):
     """Répond `{ "error": … }` comme l'ancien backend Express."""

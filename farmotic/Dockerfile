@@ -37,16 +37,13 @@ COPY run.sh ./
 RUN chown -R farmotic:farmotic /opt/farmotic \
     && chmod +x /opt/farmotic/run.sh
 
-# Utilisateur non-root
-USER farmotic
-
 # Variables par défaut
 ENV HOST=0.0.0.0
 ENV PORT=3001
 ENV FARMOTIC_NO_OPEN=1
 
-# Exposer le port
-EXPOSE 3001
+# Exposer le port (utilisé par HA pour l'accès direct + ingress_port pour l'ingress)
+EXPOSE 3001 8080
 
-# Lancer l'application
+# Lancer l'application (root pour écrire dans le volume /data monté par HA)
 CMD ["./run.sh"]

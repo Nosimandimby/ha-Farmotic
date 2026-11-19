@@ -21,12 +21,17 @@ options:
   host: "0.0.0.0"
   auto_update: false
   no_open: true
+  watchdog: "http://localhost:3001/api/sante"
 schema:
   port: int
   host: str
   auto_update: bool
   no_open: bool
+  watchdog: "url?"
 services: []
 startup: once
 boot: auto
 build: true
+ingress: true
+ingress_port: 8080
+ingress_entry: /
